@@ -1,3 +1,19 @@
+/*
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import axios from 'axios';
 import qs from 'qs';
 import { Message } from '@alifd/next';
@@ -6,6 +22,13 @@ import { isPlainObject } from './nacosutil';
 // import { SUCCESS_RESULT_CODE } from '../constants';
 
 const API_GENERAL_ERROR_MESSAGE = 'Request error, please try again later!';
+
+function goLogin() {
+  const url = window.location.href;
+  localStorage.removeItem('token');
+  const base_url = url.split('#')[0];
+  window.location.href = `${base_url}#/login`;
+}
 
 const request = () => {
   const instance = axios.create();
@@ -17,7 +40,14 @@ const request = () => {
         config.params = {};
       }
       if (!url.includes('auth/users/login')) {
-        const { accessToken = '' } = JSON.parse(localStorage.token || '{}');
+        let token = {};
+        try {
+          token = JSON.parse(localStorage.token);
+        } catch (e) {
+          console.log(e);
+          goLogin();
+        }
+        const { accessToken = '' } = token;
         config.params.accessToken = accessToken;
         config.headers = Object.assign({}, headers, { accessToken });
       }
@@ -55,11 +85,9 @@ const request = () => {
 
         if (
           [401, 403].includes(status) &&
-          ['unknown user!', 'token invalid', 'token expired!'].includes(message)
+          ['unknown user!', 'token invalid!', 'token expired!'].includes(message)
         ) {
-          localStorage.removeItem('token');
-          const [baseUrl] = location.href.split('#');
-          location.href = `${baseUrl}#/login`;
+          goLogin();
         }
         return Promise.reject(error.response);
       }
